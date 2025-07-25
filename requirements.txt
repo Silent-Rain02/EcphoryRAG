@@ -1,0 +1,30 @@
+# Core dependencies
+numpy>=1.24.0
+faiss-cpu>=1.7.4
+ollama>=0.1.0
+fastapi>=0.104.0
+uvicorn>=0.24.0
+pydantic>=2.4.0
+python-dotenv>=1.0.0
+matplotlib
+pandas
+tabulate
+networkx
+langchain
+# API and networking
+httpx>=0.25.0
+requests>=2.31.0
+
+# Testing
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.1.0
+
+# Development tools
+black>=23.10.0
+isort>=5.12.0
+flake8>=6.1.0
+mypy>=1.6.0
+
+# Logging and monitoring
+loguru>=0.7.0 
