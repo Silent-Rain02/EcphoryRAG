@@ -127,7 +127,7 @@ def parse_args():
     )
     
     # Dataset options
-    parser.add_argument("--data-path", type=str,default='/home/lzr24/EcphoryRAG/data/processed_hotpotqa/test_subset/hotpotqa_subset.jsonl',
+    parser.add_argument("--data-path", type=str,default='data/processed_hotpotqa/test_subset/hotpotqa_subset.jsonl',
                        help="Path to processed HotpotQA dataset file. If not provided, will use default location.")
     parser.add_argument("--processed-dir", type=str, default="data/processed_hotpotqa",
                        help="Directory containing processed dataset")
