@@ -1,4 +1,4 @@
-# EcphoryRAG：基于“记忆痕迹（memory traces）”的实体增强检索增强生成（RAG）
+# EcphoryRAG: Re-Imagining Knowledge-Graph RAG via Human Associative Memory
 
 This repository provides the official implementation of **EcphoryRAG**, an entity-centric knowledge-graph RAG framework inspired by cue-driven human associative memory for **multi-hop question answering**.
 
@@ -100,17 +100,59 @@ python scripts/run_2wiki_evaluation.py --data-path data/processed_2wiki/2wiki_su
 
 这些子集仅用于**复现与演示**，并不代表官方完整数据集分发。若你计划在公开仓库中分发数据（即使是子集），请确保遵守对应数据集的许可条款；若条款不允许再分发，请删除 `data/processed_*/` 下的相关文件，并改为提供下载与处理脚本。
 
-### 是否要上传“处理后的三个完整数据集”？
+### 数据集引用（Datasets）
 
-建议默认**不要直接在 GitHub 仓库里提交完整处理后数据**，而采用以下更稳妥的开源方式：
+本工作使用了以下三个公开多跳问答数据集。请在使用本仓库进行研究与发布结果时，同时引用相应的数据集论文。
 
-- **优先保留小规模子集**（用于复现与示例）
-- **完整数据**：在 README 中提供**官方来源链接**与**可复现的处理步骤**（见下节）
-- 若你确实需要公开完整处理后数据：
-  - 先确认 **HotpotQA / MuSiQue / 2WikiMultiHop** 的数据许可是否允许再分发（redistribution）
-  - 使用 **GitHub Release / 外部存储（如 Zenodo/OSF）** 发布，并在 README 中给出版本号与校验和（SHA256）
+- **HotpotQA**：用于多样化、可解释的多跳问题解答数据集  
+  - **论文**：Yang 等 (2018), *HotpotQA: A Dataset for Diverse, Explainable Multi-hop Question Answering*（[arXiv:1809.09600](https://arxiv.org/abs/1809.09600)）  
+  - **项目**：[HotpotQA 官网](https://hotpotqa.github.io/)
+- **2WikiMultiHopQA**：用于全面评估推理步骤的多跳问答数据集  
+  - **论文**：Ho 等 (2020), *Constructing A Multi-hop QA Dataset for Comprehensive Evaluation of Reasoning Steps*（[ACL Anthology](https://aclanthology.org/2020.coling-main.580/)）  
+  - **项目**：[`Alab-NII/2wikimultihop`](https://github.com/Alab-NII/2wikimultihop)
+- **MuSiQue**：通过单跳问题组合构建的多跳问题数据集  
+  - **论文**：Trivedi 等 (2022), *MuSiQue: Multihop Questions via Single-hop Question Composition*（[TACL](https://doi.org/10.1162/tacl_a_00475)）  
+  - **项目**：[`stonybrooknlp/musique`](https://github.com/stonybrooknlp/musique)
 
-数据集的版权/许可条款以各数据集官方发布为准；使用者需自行遵守对应许可与学术使用规范。
+BibTeX：
+
+```bibtex
+@misc{hotpotqa,
+      title={HotpotQA: A Dataset for Diverse, Explainable Multi-hop Question Answering},
+      author={Zhilin Yang and Peng Qi and Saizheng Zhang and Yoshua Bengio and William W. Cohen and Ruslan Salakhutdinov and Christopher D. Manning},
+      year={2018},
+      eprint={1809.09600},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/1809.09600},
+}
+
+@inproceedings{2wikiqa,
+    title = "Constructing A Multi-hop {QA} Dataset for Comprehensive Evaluation of Reasoning Steps",
+    author = "Ho, Xanh  and Duong Nguyen, Anh-Khoa  and Sugawara, Saku  and Aizawa, Akiko",
+    booktitle = "Proceedings of the 28th International Conference on Computational Linguistics",
+    month = dec,
+    year = "2020",
+    address = "Barcelona, Spain (Online)",
+    publisher = "International Committee on Computational Linguistics",
+    url = "https://aclanthology.org/2020.coling-main.580/",
+    doi = "10.18653/v1/2020.coling-main.580",
+    pages = "6609--6625"
+}
+
+@article{musique,
+    author = {Trivedi, Harsh and Balasubramanian, Niranjan and Khot, Tushar and Sabharwal, Ashish},
+    title = {MuSiQue: Multihop Questions via Single-hop Question Composition},
+    journal = {Transactions of the Association for Computational Linguistics},
+    volume = {10},
+    pages = {539-554},
+    year = {2022},
+    month = {05},
+    doi = {10.1162/tacl_a_00475},
+    url = {https://doi.org/10.1162/tacl_a_00475}
+}
+```
+
 
 ### 从官方数据生成“完整处理后数据”
 
@@ -119,8 +161,8 @@ python scripts/run_2wiki_evaluation.py --data-path data/processed_2wiki/2wiki_su
 #### 获取原始数据（官方来源）
 
 - HotpotQA：参考 [HotpotQA 官网](https://hotpotqa.github.io/)
-- MuSiQue：参考 [MuSiQue 官方仓库](https://github.com/microsoft/MuSiQue)
-- 2WikiMultiHop：参考 [2WikiMultiHop 官方仓库](https://github.com/yao8839836/2wikimultihop)
+- MuSiQue：参考 [`stonybrooknlp/musique`](https://github.com/stonybrooknlp/musique)
+- 2WikiMultiHopQA：参考 [`Alab-NII/2wikimultihop`](https://github.com/Alab-NII/2wikimultihop)
 
 #### HotpotQA → processed JSONL
 
@@ -140,33 +182,6 @@ python -c "from ecphoryrag.data_processing.musique_processor import MusiqueProce
 python -c "from ecphoryrag.data_processing.two_wiki_processor import TwoWikiProcessor; TwoWikiProcessor(raw_data_path='data/2wiki/raw_data.json', output_dir='data/processed_2wiki', split_name='dev').process_and_save()"
 ```
 
-如果你要发布处理后数据，建议同时发布处理脚本、版本号、以及处理前原始数据的来源链接与下载日期，保证可追溯性（provenance）。
-
-## 参数与输出
-
-常用参数（以 `scripts/run_hotpotqa_evaluation.py` 为例）：
-
-- `--enable-hybrid-retrieval`：启用混合检索
-- `--enable-chunking` / `--chunk-size` / `--chunk-overlap`：控制 chunk 化策略
-- `--top-k-final-values`：评测时不同 top-k 的列表（逗号分隔）
-- `--retrieval-depth`：二次检索/回溯深度
-- `--num-samples`：评测样本数量（留空表示全量）
-- `--output-dir`：结果输出目录
-
-结果通常包含：
-
-- `*_evaluation.json`：评测汇总与分项指标
-- `usage_stats.json`：token 使用与耗时统计
-- `indexing_stats.json`：索引阶段统计（若未跳过索引）
-
-## 可复现性（Reproducibility）
-
-为获得可复现结果，建议在论文/开源说明中固定并记录：
-
-- **Python 版本**、依赖版本（`requirements.txt`）
-- **Ollama 模型名称与版本**（建议在实验日志中记录 `ollama list` 输出）
-- **随机种子**（如你在实验中使用；当前脚本未统一暴露 seed 参数）
-- **运行命令与配置**（将完整命令保存到实验输出目录中）
 
 
 
