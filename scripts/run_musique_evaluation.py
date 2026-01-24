@@ -14,9 +14,7 @@ import sys
 import time
 import json
 from pathlib import Path
-import uuid
-from typing import Union, List, Tuple, Dict, Optional
-import numpy as np
+from typing import Dict, Optional
 
 
 current_dir = Path(__file__).resolve().parent
@@ -27,10 +25,8 @@ if str(project_root) not in sys.path:
 from ecphoryrag.src.ecphory_rag import EcphoryRAG
 from ecphoryrag.evaluation.processed_datasets import ProcessedMusiqueDatasetLoader
 from ecphoryrag.evaluation.evaluator import Evaluator
-from ecphoryrag.evaluation.utils import print_results_table
 
-
-
+# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -38,6 +34,37 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+def get_processed_musique_data(processed_dir: str = "data/processed_musique") -> str:
+    """
+    Get the path to the processed MuSiQue dataset.
+    
+    Args:
+        processed_dir: Directory containing the processed dataset
+    
+    Returns:
+        Path to the processed development dataset file
+    """
+    # Get the absolute path of the current script
+    current_file = os.path.abspath(__file__)
+
+    # Calculate the project root directory path
+    project_root = os.path.dirname(os.path.dirname(current_file))
+
+    # Define path to processed data
+    dev_path = os.path.join(project_root, processed_dir, "dev_processed.jsonl")
+    
+    # Check if file exists
+    if os.path.exists(dev_path):
+        logger.info(f"Processed MuSiQue dataset found at {dev_path}")
+        return dev_path
+    else:
+        logger.error(f"Processed MuSiQue dataset not found at {dev_path}")
+        logger.info(
+            "Please process the raw MuSiQue dataset first using the process_musique_data.py script:"
+            "\npython scripts/process_musique_data.py --raw_data_file data/musique/musique_ans_v1.0_dev.jsonl "
+            "--output_dir data/processed_musique --split_name dev"
+        )
+        raise FileNotFoundError(f"Processed dataset not found: {dev_path}")
 
 def create_test_subset(data_path: str, subset_size: int = 10) -> str:
     """
@@ -84,42 +111,6 @@ def create_test_subset(data_path: str, subset_size: int = 10) -> str:
     logger.info(f"Created test subset at {subset_path} with {len(samples)} samples")
     return subset_path
 
-
-def get_processed_musique_data(processed_dir: str = "data/processed_musique") -> str:
-    """
-    Get the path to the processed MuSiQue dataset.
-    
-    Args:
-        processed_dir: Directory containing the processed dataset
-    
-    Returns:
-        Path to the processed development dataset file
-    """
-    # Get the absolute path of the current script
-    current_file = os.path.abspath(__file__)
-
-    # Calculate the project root directory path
-    project_root = os.path.dirname(os.path.dirname(current_file))
-
-    # Define path to processed data
-    dev_path = os.path.join(project_root, processed_dir, "dev_processed.jsonl")
-    
-    # Check if file exists
-    if os.path.exists(dev_path):
-        logger.info(f"Processed MuSiQue dataset found at {dev_path}")
-        return dev_path
-    else:
-        logger.error(f"Processed MuSiQue dataset not found at {dev_path}")
-        logger.info(
-            "Please process the raw MuSiQue dataset first using the process_musique_data.py script:"
-            "\npython scripts/process_musique_data.py --raw_data_file data/musique/musique_ans_v1.0_dev.jsonl "
-            "--output_dir data/processed_musique --split_name dev"
-        )
-        raise FileNotFoundError(f"Processed dataset not found: {dev_path}")
-        
-    return dev_path
-
-
 def parse_args():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(
@@ -128,22 +119,14 @@ def parse_args():
     )
     
     # Dataset options
-    parser.add_argument("--data-path", type=str, 
+    parser.add_argument("--data-path", type=str,
                        help="Path to processed MuSiQue dataset file. If not provided, will use default location.")
     parser.add_argument("--processed-dir", type=str, default="data/processed_musique",
                        help="Directory containing processed dataset")
-    parser.add_argument("--test-subset", default=True, action="store_true",
+    parser.add_argument("--test-subset", action="store_true",
                        help="Use a small test subset instead of the full dataset")
     parser.add_argument("--subset-size", type=int, default=500,
                        help="Size of the test subset when --test-subset is used")
-    
-    # Workspace options
-    parser.add_argument("--workspace-dir", type=str, default="musique_evaluation_workspace",
-                       help="Directory for storing EcphoryRAG workspace data")
-    parser.add_argument("--force-reindex", action="store_true",
-                       help="Force reindexing of all documents")
-    parser.add_argument("--skip-index", action="store_true",
-                       help="Skip indexing and use existing index for evaluation")
     
     # Model configuration
     parser.add_argument("--embedding-model", type=str, default="bge-m3",
@@ -172,18 +155,26 @@ def parse_args():
                        help="Overlap between consecutive chunks")
     
     # Retrieval parameters
-    parser.add_argument("--enable-hybrid-retrieval", action="store_true", default=False,
+    parser.add_argument("--enable-hybrid-retrieval", action="store_true",
                        help="Enable hybrid retrieval (combines entity and chunk retrieval)")
     
     # Evaluation options
     parser.add_argument("--num-samples", type=int, default=None,
                        help="Number of samples to evaluate. Default is all.")
-    parser.add_argument("--output-dir", type=str, default="musique500depth2",
+    parser.add_argument("--output-dir", type=str, default="musique_evaluation_results",
                        help="Directory to save evaluation results")
     parser.add_argument("--output-file", type=str, default="musique_evaluation.json",
                        help="Filename for evaluation results")
     parser.add_argument("--interactive", action="store_true",
                        help="Run in interactive mode for testing individual questions")
+    
+    # Workspace options
+    parser.add_argument("--workspace-dir", type=str, default="musique_evaluation_workspace",
+                       help="Directory for storing EcphoryRAG workspace data")
+    parser.add_argument("--force-reindex", action="store_true",
+                       help="Force reindexing of all documents")
+    parser.add_argument("--skip-index", action="store_true",
+                       help="Skip indexing and use existing index for evaluation")
     
     return parser.parse_args()
 
@@ -204,16 +195,41 @@ def print_results_table(results: Dict[str, Dict[str, float]], title: Optional[st
             print(f"\n{title}")
         for top_k, metrics in results.items():
             print(f"\n{top_k}:")
-            for metric, value in metrics.items():
-                if isinstance(value, float):
-                    print(f"  {metric}: {value:.4f}")
-                else:
-                    print(f"  {metric}: {value}")
+            if isinstance(metrics, dict):
+                for metric, value in metrics.items():
+                    if isinstance(value, float):
+                        print(f"  {metric}: {value:.4f}")
+                    else:
+                        print(f"  {metric}: {value}")
+            else:
+                print(f"  {metrics}")
         return
+    
+    # Check if results is empty or invalid
+    if not results:
+        logger.warning("No results to display")
+        if title:
+            print(f"\n{title}")
+        print("No results available")
+        return
+    
+    # Validate that all values are dictionaries
+    for top_k, metrics in results.items():
+        if not isinstance(metrics, dict):
+            logger.error(f"Expected dict for {top_k}, got {type(metrics)}: {metrics}")
+            return
     
     # Prepare table data
     headers = ["top_k", "exact_match", "f1_score", "avg_processing_time"]
-    if "rouge1" in next(iter(results.values())):
+    
+    # Check if rouge metrics are available in any result
+    has_rouge = False
+    for metrics in results.values():
+        if isinstance(metrics, dict) and "rouge1" in metrics:
+            has_rouge = True
+            break
+    
+    if has_rouge:
         headers.extend(["rouge1", "rouge2", "rougeL"])
     
     table_data = []
@@ -249,9 +265,26 @@ def print_token_usage_table(token_usage: Dict[str, Dict[str, int]], title: Optio
             print(f"\n{title}")
         for top_k, stats in token_usage.items():
             print(f"\n{top_k}:")
-            for metric, value in stats.items():
-                print(f"  {metric}: {value}")
+            if isinstance(stats, dict):
+                for metric, value in stats.items():
+                    print(f"  {metric}: {value}")
+            else:
+                print(f"  {stats}")
         return
+    
+    # Check if token_usage is empty or invalid
+    if not token_usage:
+        logger.warning("No token usage data to display")
+        if title:
+            print(f"\n{title}")
+        print("No token usage data available")
+        return
+    
+    # Validate that all values are dictionaries
+    for top_k, stats in token_usage.items():
+        if not isinstance(stats, dict):
+            logger.error(f"Expected dict for {top_k}, got {type(stats)}: {stats}")
+            return
     
     # Prepare table data
     headers = ["top_k", "embedding_tokens", "completion_tokens", "total_tokens", "avg_tokens_per_query"]
@@ -286,9 +319,11 @@ def main():
     else:
         data_path = get_processed_musique_data(args.processed_dir)
     
-    # If using test subset, create subset
+    # If using test subset, create it
     if args.test_subset:
         data_path = create_test_subset(data_path, args.subset_size)
+        logger.info(f"Using test subset at: {data_path}")
+    else:
         logger.info(f"Using full MuSiQue dataset at: {data_path}")
     
     # Initialize processed MuSiQue dataset loader
@@ -308,7 +343,7 @@ def main():
         # Create workspace directory if it doesn't exist
         os.makedirs(args.workspace_dir, exist_ok=True)
         
-        # Set workspace directory based on whether using subset
+        # Set workspace directory based on subset usage
         workspace_dir = args.workspace_dir
         if args.test_subset:
             workspace_dir = os.path.join(args.workspace_dir, "test_subset")
@@ -334,7 +369,7 @@ def main():
         # Track indexing time and token usage
         indexing_start_time = time.time()
         
-        # If not skip indexing mode, then index
+        # Index documents if not skipping
         if not args.skip_index:
             # Load dataset
             data = dataset_loader.load_data()
@@ -368,14 +403,14 @@ def main():
             logger.info(f"Indexing completed in {indexing_time:.2f} seconds")
             logger.info(f"Indexing token usage: {indexing_token_usage['token_usage']}")
         
-        # If interactive mode, run interactive question answering
+        # Run in interactive mode if requested
         if args.interactive:
             print("\n" + "="*50)
-            print("Interactive question answering mode (enter 'q' to exit)")
+            print("Interactive QA Mode (Enter 'q' to quit)")
             print("="*50)
             
             while True:
-                question = input("\nPlease enter a question: ").strip()
+                question = input("\nEnter your question: ").strip()
                 if question.lower() == 'q':
                     break
                     
@@ -407,7 +442,7 @@ def main():
                             print(f"{i}. {source}")
                         
                     # Print usage stats
-                    print("\nQuery statistics:")
+                    print("\nQuery Statistics:")
                     print("-"*30)
                     print(f"Query time: {query_time:.2f} seconds")
                     print(f"Embedding tokens: {query_stats['token_usage']['embedding_tokens']}")

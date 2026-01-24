@@ -16,7 +16,6 @@ import json
 from pathlib import Path
 from typing import Dict, Optional
 
-# 修复路径引用问题
 current_dir = Path(__file__).resolve().parent
 project_root = current_dir.parent
 if str(project_root) not in sys.path:
@@ -25,7 +24,6 @@ if str(project_root) not in sys.path:
 from ecphoryrag.src.ecphory_rag import EcphoryRAG
 from ecphoryrag.evaluation.processed_datasets import Processed2WikiDatasetLoader
 from ecphoryrag.evaluation.evaluator import Evaluator
-from ecphoryrag.evaluation.utils import print_results_table
 
 # Configure logging
 logging.basicConfig(
@@ -122,9 +120,9 @@ def parse_args():
     # Dataset options
     parser.add_argument("--data-path", type=str,
                        help="Path to processed 2Wiki dataset file. If not provided, will use default location.")
-    parser.add_argument("--processed-dir", type=str, default="data/processed_2wikimultihop",
+    parser.add_argument("--processed-dir", type=str, default="data/processed_2wiki",
                        help="Directory containing processed dataset")
-    parser.add_argument("--test-subset", action="store_true",default=True,
+    parser.add_argument("--test-subset", action="store_true",
                        help="Use a small test subset instead of the full dataset")
     parser.add_argument("--subset-size", type=int, default=500,
                        help="Size of the test subset when --test-subset is used")
@@ -156,13 +154,13 @@ def parse_args():
                        help="Overlap between consecutive chunks")
     
     # Retrieval parameters
-    parser.add_argument("--enable-hybrid-retrieval", action="store_true", default=False,
+    parser.add_argument("--enable-hybrid-retrieval", action="store_true",
                        help="Enable hybrid retrieval (combines entity and chunk retrieval)")
     
     # Evaluation options
     parser.add_argument("--num-samples", type=int, default=None,
                        help="Number of samples to evaluate. Default is all.")
-    parser.add_argument("--output-dir", type=str, default="2wiki_evaluation_results_500_test",
+    parser.add_argument("--output-dir", type=str, default="2wiki_evaluation_results",
                        help="Directory to save evaluation results")
     parser.add_argument("--output-file", type=str, default="2wiki_evaluation.json",
                        help="Filename for evaluation results")
@@ -170,9 +168,9 @@ def parse_args():
                        help="Run in interactive mode for testing individual questions")
     
     # Workspace options
-    parser.add_argument("--workspace-dir", type=str, default="2wiki_evaluation_workspace_500",
+    parser.add_argument("--workspace-dir", type=str, default="2wiki_evaluation_workspace",
                        help="Directory for storing EcphoryRAG workspace data")
-    parser.add_argument("--force-reindex", action="store_true",default=False,
+    parser.add_argument("--force-reindex", action="store_true",
                        help="Force reindexing of all documents")
     parser.add_argument("--skip-index", action="store_true",
                        help="Skip indexing and use existing index for evaluation")

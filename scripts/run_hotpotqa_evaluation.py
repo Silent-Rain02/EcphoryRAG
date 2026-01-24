@@ -14,7 +14,6 @@ import sys
 import time
 import json
 from pathlib import Path
-import uuid
 from typing import Dict, Optional
 
 current_dir = Path(__file__).resolve().parent
@@ -26,7 +25,6 @@ if str(project_root) not in sys.path:
 from ecphoryrag.src.ecphory_rag import EcphoryRAG
 from ecphoryrag.evaluation.processed_datasets import ProcessedHotpotQADatasetLoader
 from ecphoryrag.evaluation.evaluator import Evaluator
-from ecphoryrag.evaluation.utils import print_results_table
 
 
 # Configure logging
@@ -36,53 +34,6 @@ logging.basicConfig(
     handlers=[logging.StreamHandler()]
 )
 logger = logging.getLogger(__name__)
-
-
-def create_test_subset(data_path: str, subset_size: int = 10) -> str:
-    """
-    Create a small test subset from the full dataset.
-    
-    Args:
-        data_path: Path to the processed dataset
-        subset_size: Size of the subset
-        
-    Returns:
-        Path to the subset file
-    """
-    # Create subset directory
-    subset_dir = os.path.join(os.path.dirname(data_path), "test_subset")
-    os.makedirs(subset_dir, exist_ok=True)
-    
-    # Subset file path
-    subset_path = os.path.join(subset_dir, "hotpotqa_subset.jsonl")
-    
-    # If subset exists and has correct size, return it
-    if os.path.exists(subset_path):
-        with open(subset_path, 'r', encoding='utf-8') as f:
-            line_count = sum(1 for _ in f)
-        if line_count == subset_size:
-            logger.info(f"Test subset already exists at {subset_path} with {subset_size} samples")
-            return subset_path
-        else:
-            logger.info(f"Existing subset has {line_count} samples, creating new subset with {subset_size} samples")
-    
-    # Read processed dataset
-    logger.info(f"Creating test subset of size {subset_size} from {data_path}")
-    samples = []
-    with open(data_path, 'r', encoding='utf-8') as f:
-        for i, line in enumerate(f):
-            if i >= subset_size:
-                break
-            samples.append(json.loads(line))
-    
-    # Save subset
-    with open(subset_path, 'w', encoding='utf-8') as f:
-        for sample in samples:
-            f.write(json.dumps(sample, ensure_ascii=False) + '\n')
-    
-    logger.info(f"Created test subset at {subset_path} with {len(samples)} samples")
-    return subset_path
-
 
 def get_processed_hotpotqa_data(processed_dir: str = "data/processed_hotpotqa") -> str:
     """
@@ -115,9 +66,51 @@ def get_processed_hotpotqa_data(processed_dir: str = "data/processed_hotpotqa") 
             "--output_dir data/processed_hotpotqa --split_name dev"
         )
         raise FileNotFoundError(f"Processed dataset not found: {dev_path}")
-        
-    return dev_path
 
+def create_test_subset(data_path: str, subset_size: int = 10) -> str:
+    """
+    Create a small test subset from the full dataset.
+    
+    Args:
+        data_path: Path to the processed dataset
+        subset_size: Subset size
+        
+    Returns:
+        Path to the subset file
+    """
+    # Create subset directory
+    subset_dir = os.path.join(os.path.dirname(data_path), "test_subset")
+    os.makedirs(subset_dir, exist_ok=True)
+    
+    # Subset file path
+    subset_path = os.path.join(subset_dir, "hotpotqa_subset.jsonl")
+    
+    # If subset already exists and is the correct size, return it
+    if os.path.exists(subset_path):
+        with open(subset_path, 'r', encoding='utf-8') as f:
+            line_count = sum(1 for _ in f)
+        if line_count == subset_size:
+            logger.info(f"Test subset already exists at {subset_path} with {subset_size} samples")
+            return subset_path
+        else:
+            logger.info(f"Existing subset has {line_count} samples, creating new subset with {subset_size} samples")
+    
+    # Read processed dataset
+    logger.info(f"Creating test subset of size {subset_size} from {data_path}")
+    samples = []
+    with open(data_path, 'r', encoding='utf-8') as f:
+        for i, line in enumerate(f):
+            if i >= subset_size:
+                break
+            samples.append(json.loads(line))
+    
+    # Save subset
+    with open(subset_path, 'w', encoding='utf-8') as f:
+        for sample in samples:
+            f.write(json.dumps(sample, ensure_ascii=False) + '\n')
+    
+    logger.info(f"Created test subset at {subset_path} with {len(samples)} samples")
+    return subset_path
 
 def parse_args():
     """Parse command line arguments."""
@@ -127,13 +120,13 @@ def parse_args():
     )
     
     # Dataset options
-    parser.add_argument("--data-path", type=str,default='data/processed_hotpotqa/test_subset/hotpotqa_subset.jsonl',
+    parser.add_argument("--data-path", type=str,
                        help="Path to processed HotpotQA dataset file. If not provided, will use default location.")
     parser.add_argument("--processed-dir", type=str, default="data/processed_hotpotqa",
                        help="Directory containing processed dataset")
-    parser.add_argument("--test-subset", action="store_true", default=False,
+    parser.add_argument("--test-subset", action="store_true",
                        help="Use a small test subset instead of the full dataset")
-    parser.add_argument("--subset-size", type=int, default=1,
+    parser.add_argument("--subset-size", type=int, default=500,
                        help="Size of the test subset when --test-subset is used")
     
     # Model configuration
@@ -163,19 +156,18 @@ def parse_args():
                        help="Overlap between consecutive chunks")
     
     # Retrieval parameters
-    parser.add_argument("--enable-hybrid-retrieval", action="store_true", default=False,
+    parser.add_argument("--enable-hybrid-retrieval", action="store_true",
                        help="Enable hybrid retrieval (combines entity and chunk retrieval)")
     
     # Evaluation options
     parser.add_argument("--num-samples", type=int, default=None,
                        help="Number of samples to evaluate. Default is all.")
-    parser.add_argument("--output-dir", type=str, default="hotpot500depth2",
+    parser.add_argument("--output-dir", type=str, default="hotpotqa_evaluation_results",
                        help="Directory to save evaluation results")
+    parser.add_argument("--output-file", type=str, default="hotpotqa_evaluation.json",
+                       help="Filename for evaluation results")
     parser.add_argument("--interactive", action="store_true",
                        help="Run in interactive mode for testing individual questions")
-    parser.add_argument("--save-full-responses", action="store_true",
-                       help="Save full LLM responses and retrieved contents for analysis")
-    parser.add_argument("--output-file", type=str, default="hotpotqa_evaluation.json", help="Filename for saving evaluation results (e.g., hotpotqa_evaluation.json)")
     
     # Workspace options
     parser.add_argument("--workspace-dir", type=str, default="hotpotqa_evaluation_workspace",
@@ -204,16 +196,41 @@ def print_results_table(results: Dict[str, Dict[str, float]], title: Optional[st
             print(f"\n{title}")
         for top_k, metrics in results.items():
             print(f"\n{top_k}:")
-            for metric, value in metrics.items():
-                if isinstance(value, float):
-                    print(f"  {metric}: {value:.4f}")
-                else:
-                    print(f"  {metric}: {value}")
+            if isinstance(metrics, dict):
+                for metric, value in metrics.items():
+                    if isinstance(value, float):
+                        print(f"  {metric}: {value:.4f}")
+                    else:
+                        print(f"  {metric}: {value}")
+            else:
+                print(f"  {metrics}")
         return
+    
+    # Check if results is empty or invalid
+    if not results:
+        logger.warning("No results to display")
+        if title:
+            print(f"\n{title}")
+        print("No results available")
+        return
+    
+    # Validate that all values are dictionaries
+    for top_k, metrics in results.items():
+        if not isinstance(metrics, dict):
+            logger.error(f"Expected dict for {top_k}, got {type(metrics)}: {metrics}")
+            return
     
     # Prepare table data
     headers = ["top_k", "exact_match", "f1_score", "avg_processing_time"]
-    if "rouge1" in next(iter(results.values())):
+    
+    # Check if rouge metrics are available in any result
+    has_rouge = False
+    for metrics in results.values():
+        if isinstance(metrics, dict) and "rouge1" in metrics:
+            has_rouge = True
+            break
+    
+    if has_rouge:
         headers.extend(["rouge1", "rouge2", "rougeL"])
     
     table_data = []
@@ -249,9 +266,26 @@ def print_token_usage_table(token_usage: Dict[str, Dict[str, int]], title: Optio
             print(f"\n{title}")
         for top_k, stats in token_usage.items():
             print(f"\n{top_k}:")
-            for metric, value in stats.items():
-                print(f"  {metric}: {value}")
+            if isinstance(stats, dict):
+                for metric, value in stats.items():
+                    print(f"  {metric}: {value}")
+            else:
+                print(f"  {stats}")
         return
+    
+    # Check if token_usage is empty or invalid
+    if not token_usage:
+        logger.warning("No token usage data to display")
+        if title:
+            print(f"\n{title}")
+        print("No token usage data available")
+        return
+    
+    # Validate that all values are dictionaries
+    for top_k, stats in token_usage.items():
+        if not isinstance(stats, dict):
+            logger.error(f"Expected dict for {top_k}, got {type(stats)}: {stats}")
+            return
     
     # Prepare table data
     headers = ["top_k", "embedding_tokens", "completion_tokens", "total_tokens", "avg_tokens_per_query"]
